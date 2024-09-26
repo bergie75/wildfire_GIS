@@ -9,6 +9,28 @@ from math import pi, sqrt
 home_directory = "C:/Users/physi/OneDrive/Desktop/Data Sources/GIS_projects/"
 
 
+def find_affected_areas(sub_folder_fires="Wildfires_1878_2019_Polygon_Data/Shapefile/",
+                        fire_file="US_Wildfires_1878_2019.shp",
+                        sub_folder_boundaries="BoundaryData/",
+                        boundary_file="GovernmentUnits_National_GPKG.gpkg"):
+    # define file path
+    path_to_fire_data = home_directory + sub_folder_fires + fire_file
+    path_to_boundary_data = home_directory + sub_folder_boundaries + boundary_file
+    boundary_data = gpd.read_file(path_to_boundary_data, layer="GU_CountyOrEquivalent")
+    fire_data = gpd.read_file(path_to_fire_data, rows=1000).to_crs(boundary_data.crs)
+
+    # find all counties a fire touched
+    joined_data = fire_data.sjoin(boundary_data, predicate="intersects", how="left")
+    summary = joined_data[["FireCode","PERMANENT_IDENTIFIER"]]
+    summary = summary.groupby("FireCode")["PERMANENT_IDENTIFIER"].apply(list)
+
+    # # save map as interactive html
+    # m = joined_data.explore()
+    # save_location = home_directory+"after_joins.html"
+    # m.save(save_location)
+    # web.open(save_location)
+
+
 def create_modified_shapefile(sub_folder="Wildfires_1878_2019_Polygon_Data/Shapefile/",
                                filestring="US_Wildfires_1878_2019.shp",
                               outfile="postprocessed_fire_data.shp"):
@@ -83,5 +105,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     if args.selected_function == "create_modified_shapefile":
         create_modified_shapefile(sub_folder=args.sub_folder_fire, filestring=args.file)
+    elif args.selected_function == "find_affected_areas":
+        find_affected_areas()
     else:
         fire_irregularity_explorer(year=int(args.year), sub_folder=args.sub_folder_fire, filestring=args.file)
